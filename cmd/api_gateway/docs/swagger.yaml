@@ -1,0 +1,180 @@
+definitions:
+  member.LoginReq:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  member.RegisterReq:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  member.RegisterRes:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+info:
+  contact: {}
+paths:
+  /:
+    get:
+      description: Returns a simple confirmation message
+      responses:
+        "200":
+          description: api gateway start!
+          schema:
+            type: string
+      summary: Check API Gateway status
+      tags:
+      - Shared
+  /debug:
+    post:
+      description: Enable or disable debug logging for a service
+      parameters:
+      - description: Service name
+        in: query
+        name: service
+        required: true
+        type: string
+      - description: Debug status
+        in: query
+        name: status
+        required: true
+        type: boolean
+      responses:
+        "200":
+          description: Service debug mode updated
+          schema:
+            type: string
+        "400":
+          description: Invalid status value
+          schema:
+            type: string
+      summary: Toggle Debug Log Flag
+      tags:
+      - Shared
+  /member/find:
+    get:
+      consumes:
+      - application/json
+      description: 根据邮箱查找用户信息
+      parameters:
+      - description: 用户邮箱
+        in: query
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户信息
+          schema:
+            type: string
+        "400":
+          description: 请求错误
+          schema:
+            type: string
+        "404":
+          description: 未找到用户
+          schema:
+            type: string
+      summary: 查找用户信息
+      tags:
+      - Members
+  /member/login:
+    post:
+      consumes:
+      - application/json
+      description: 用户通过邮箱和密码登录
+      parameters:
+      - description: 用户登录信息
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/member.LoginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功
+          schema:
+            type: string
+        "400":
+          description: 请求错误
+          schema:
+            type: string
+        "401":
+          description: 登录失败
+          schema:
+            type: string
+      summary: 用户登录
+      tags:
+      - Members
+  /member/logout:
+    post:
+      consumes:
+      - application/json
+      description: 注销用户会话
+      parameters:
+      - description: 用户登出信息
+        in: query
+        name: auth
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 注销成功
+          schema:
+            type: string
+        "400":
+          description: 请求错误
+          schema:
+            type: string
+        "500":
+          description: 服务器错误
+          schema:
+            type: string
+      summary: 用户登出
+      tags:
+      - Members
+  /member/register:
+    post:
+      consumes:
+      - application/json
+      description: 处理用户注册请求
+      parameters:
+      - description: 注册请求
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/member.RegisterReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 注册成功
+          schema:
+            $ref: '#/definitions/member.RegisterRes'
+        "400":
+          description: 请求错误
+          schema:
+            type: string
+        "500":
+          description: 服务器错误
+          schema:
+            type: string
+      summary: 注册新用户
+      tags:
+      - Members
+swagger: "2.0"

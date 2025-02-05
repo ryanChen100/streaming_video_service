@@ -1,0 +1,17 @@
+port: ${CHAT_SERVICE_PORT}
+
+mongo:
+  host: ${MONGO_HOST}
+  port: ${MONGO_PORT}
+  user: ${MONGO_USER}
+  password: ${MONGO_PASSWORD}
+  database: ${MONGO_CHAT_DB}
+  retry_interval: 5 #重試延遲postgreSQL（s）
+  retry_count: 3 #重試連線postgreSQL（次）
+
+redis:
+  redis_db: 1 #設置chat cache
+
+member:
+  service_port: ${MEMBER_SERVICE_PORT}
+  service_name: ${MEMBER_SERVICE}

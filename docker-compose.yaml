@@ -1,0 +1,207 @@
+# docker-compose config 驗證 docker-compose.yaml 是否正確
+#version: '3.8'  version 字段已废弃，不再需要指定 Compose 文件版本。
+
+services:
+  member_service:
+    container_name: ${MEMBER_SERVICE} 
+    build:
+      context: . # 根目錄
+      dockerfile: ./cmd/member_service/Dockerfile # Dockerfile 路徑
+    ports:
+      - "${MEMBER_SERVICE_PORT}:${MEMBER_SERVICE_PORT}" # 映射主機埠到容器埠
+    env_file:
+      - .env # 加載環境變量文件
+    volumes:
+      - ./cmd/member_service/config/member_service.yaml:/app/config/member_service.yaml # 映射配置文件
+      - ${SAVE_LOG}:/app/log # 映射日誌目錄
+
+    depends_on: # 指定啟動順序，需在以下服務啟動後再啟動
+      - postgres
+      # - redis-master
+    networks:
+      app_network:
+        ipv4_address: ${MEMBER_SERVICE_IP}
+
+  chat_service:
+    container_name: ${CHAT_SERVICE} 
+    build:
+      context: . # 根目錄
+      dockerfile: ./cmd/chat_service/Dockerfile # Dockerfile 路徑
+    ports:
+      - "${CHAT_SERVICE_PORT}:${CHAT_SERVICE_PORT}" # 映射主機埠到容器埠
+    env_file:
+      - .env # 加載環境變量文件
+    volumes:
+      - ./cmd/chat_service/config/chat_service.yaml:/app/config/chat_service.yaml # 映射配置文件
+      - ${SAVE_LOG}:/app/log # 映射日誌目錄
+    depends_on: # 指定啟動順序，需在以下服務啟動後再啟動
+      - member_service
+      - api_gateway
+      - mongo
+    networks:
+      app_network:
+        ipv4_address: ${CHAT_SERVICE_IP}
+
+  api_gateway:
+    # image: ${API_GATEWAY} # 使用現成的 Docker 映像
+    container_name: ${API_GATEWAY} # 使用現成的 Docker 映像
+    build:
+      context: . # 根目录
+      dockerfile: ./cmd/api_gateway/Dockerfile
+    ports:
+      - "${API_GATEWAY_PORT}:${API_GATEWAY_PORT}"
+    env_file:
+      - .env # 挂载環境配置
+    volumes:
+      - ./cmd/api_gateway/config/api_gateway.yaml:/app/config/api_gateway.yaml # 映射配置文件到容器內
+      - ${SAVE_LOG}:/app/log # 映射日誌目錄
+      - ./docs:/app/docs # 映射日誌目錄
+    depends_on: # 指定啟動順序，需在以下服務啟動後再啟動
+      - member_service  
+    networks:
+      app_network:
+        ipv4_address: ${API_GATEWAY_IP}
+
+  postgres:
+    image: postgres:latest
+    container_name: ${POSTGRES_NAME}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./Makefile/init-multi-dbs.sql:/docker-entrypoint-initdb.d/init-multi-dbs.sql
+    networks:
+      app_network:
+        ipv4_address: ${POSTGRES_IP}
+
+  mongo:
+    image: mongo:latest
+    container_name: ${MONGODB_NAME}
+    ports:
+      - "${MONGO_PORT}:27017" # 映射主机的 MONGO_PORT 到容器内的 27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_MEMBER_DB: ${MONGO_MEMBER_DB}
+      MONGO_CHAT_DB: ${MONGO_CHAT_DB}
+      MONGO_STREAMING_DB: ${MONGO_STREAMING_DB}
+    volumes:
+      - mongo_data:/data/db
+      - ./Makefile/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro # 自动执行脚本
+      - ./.env:/app/.env:ro
+    env_file:
+      - .env
+    networks:
+      app_network:
+        ipv4_address: ${MONGO_IP}
+
+  redis-master:
+    image: redis:latest
+    container_name: redis-master
+    ports:
+      - "${REDIS_MASTER_PORT}:6379" # 映射主机端口到 Redis 主节点
+    volumes:
+      -  ./Makefile/redis_sentinel/redis_master/redis.conf:/usr/local/etc/redis/redis.conf
+      -  ${REDIS_SAVE_LOG}/redis_master_data:/data
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    networks:
+      app_network:
+        ipv4_address: ${REDIS_MASTER_IP}
+
+  redis-replica-1:
+    image: redis:latest
+    container_name: redis-replica-1
+    ports:
+      - "${REDIS_REPLICA1_PORT}:6379"
+    volumes:
+      - ./Makefile/redis_sentinel/redis_replica/redis.conf:/usr/local/etc/redis/redis.conf
+      - ${REDIS_SAVE_LOG}/redis_replica1_data:/data
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--replicaof", "redis-master", "6379"]
+    depends_on:
+      - redis-master
+    networks:
+      app_network:
+        ipv4_address: ${REDIS_REPLICA1_IP}
+
+  redis-replica-2:
+    image: redis:latest
+    container_name: redis-replica-2
+    ports:
+      - "${REDIS_REPLICA2_PORT}:6379"
+    volumes:
+      - ./Makefile/redis_sentinel/redis_replica/redis.conf:/usr/local/etc/redis/redis.conf
+      - ${REDIS_SAVE_LOG}/redis_replica2_data:/data
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--replicaof", "redis-master", "6379"]
+    depends_on:
+      - redis-master
+    networks:
+      app_network:
+        ipv4_address: ${REDIS_REPLICA2_IP}
+
+  sentinel-1:
+    image: redis:latest
+    container_name: sentinel1
+    ports:
+      - "${REDIS_SENTINEL1_PORT}:26379" # 哨兵监听端口
+    volumes:
+      - ./Makefile/redis_sentinel/sentinel-1.conf:/usr/local/etc/redis/sentinel.conf
+      - ${REDIS_SAVE_LOG}/sentinel-1-data:/data
+    command: ["redis-sentinel", "/usr/local/etc/redis/sentinel.conf"]
+    depends_on:
+      - redis-master
+      - redis-replica-1
+      - redis-replica-2    
+    networks:
+      app_network:
+        ipv4_address: ${REDIS_SENTINEL1_IP}
+
+  sentinel-2:
+    image: redis:latest
+    container_name: sentinel2
+    ports:
+      - "${REDIS_SENTINEL2_PORT}:26379"
+    volumes:
+      - ./Makefile/redis_sentinel/sentinel-2.conf:/usr/local/etc/redis/sentinel.conf
+      - ${REDIS_SAVE_LOG}/sentinel-2-data:/data
+    command: ["redis-sentinel", "/usr/local/etc/redis/sentinel.conf"]
+    depends_on:
+      - redis-master
+      - redis-replica-1
+      - redis-replica-2    
+    networks:
+      app_network:
+        ipv4_address: ${REDIS_SENTINEL2_IP}
+
+  sentinel-3:
+    image: redis:latest
+    container_name: sentinel3
+    ports:
+    - "${REDIS_SENTINEL3_PORT}:26379"
+    volumes:
+      - ./Makefile/redis_sentinel/sentinel-3.conf:/usr/local/etc/redis/sentinel.conf
+      - ${REDIS_SAVE_LOG}/sentinel-3-data:/data
+    command: ["redis-sentinel", "/usr/local/etc/redis/sentinel.conf"]
+    depends_on:
+      - redis-master
+      - redis-replica-1
+      - redis-replica-2    
+    networks:
+      app_network:
+        ipv4_address: ${REDIS_SENTINEL3_IP}
+
+networks:
+  app_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${IP_SUBNET}
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_master_data:
+  redis_replica1_data:
+  redis_replica2_data:

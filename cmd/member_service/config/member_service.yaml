@@ -1,0 +1,15 @@
+port: ${MEMBER_SERVICE_PORT}
+ip: ${MEMBER_SERVICE_IP}
+session_ttl: 5 #設置 jwt和session過期時間（m）
+
+pg:
+  host: ${POSTGRES_HOST}
+  port: ${POSTGRES_PORT}
+  user: ${POSTGRES_USER}
+  password: ${POSTGRES_PASSWORD}
+  database: ${POSTGRES_MEMBER_DB}
+  retry_interval: 5 #重試延遲postgreSQL（s）
+  retry_count: 3 #重試連線postgreSQL（次）
+
+redis:
+  redis_db: 0 #設置member session

@@ -1,0 +1,4 @@
+port: ${API_GATEWAY_PORT}
+member:
+  service_port: ${MEMBER_SERVICE_PORT}
+  service_name: ${MEMBER_SERVICE}

@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package member;
+
+option go_package = "./member";
+
+service MemberService {
+  rpc LogDebugMode (LogDebugModeReq) returns (LogDebugModeRes);
+  rpc Register (RegisterReq) returns (RegisterRes);
+  rpc FindMember (FindByMemberReq) returns (FindByMemberRes);
+  rpc Login (LoginReq) returns (LoginRes);
+  rpc Logout (LogoutReq) returns (LogoutRes);
+  rpc ForceLogout (ForceLogoutReq) returns (ForceLogoutRes);
+	rpc CheckSessionTimeout (CheckSessionTimeoutReq) returns (CheckSessionTimeoutRes);
+	rpc ReconnectSession (ReconnectSessionReq) returns (ReconnectSessionRes);
+}
+
+message LogDebugModeReq {
+  string status = 1;
+}
+
+message LogDebugModeRes {
+  bool success = 1;
+  string message = 2;
+}
+
+message RegisterReq {
+  string email = 1;
+  string password = 2;
+}
+
+message RegisterRes {
+  bool success = 1;
+  string message = 2;
+}
+
+message FindByMemberReq {
+  FindMemberParam param = 1;
+}
+
+message FindMemberParam{
+  int64 id = 1;
+  string member_id = 2;
+  string email = 3;
+}
+
+message FindByMemberRes {
+  bool success = 1;
+  MemberInfo info = 2;
+  string message = 3;
+}
+
+message MemberInfo {
+  string id = 1;
+  string email = 2;
+  string password = 3;
+}
+
+message LoginReq {
+  string email = 1;
+  string password = 2;
+}
+
+message LoginRes {
+  bool success = 1;
+  string token = 2;
+  string message = 3;
+}
+
+message LogoutReq {
+  string token = 1;
+}
+
+message LogoutRes {
+  bool success = 1;
+  string message = 2;
+}
+
+message ForceLogoutReq{
+  string member_id = 1;
+}
+
+message ForceLogoutRes{
+  bool success = 1;
+  string message = 3;
+}
+
+message CheckSessionTimeoutReq{
+  string token = 1;
+}
+
+message CheckSessionTimeoutRes{
+  bool success = 1;
+  bool expire = 2;
+  string message = 3;
+}
+
+message ReconnectSessionReq{
+  string token = 1;
+}
+
+message ReconnectSessionRes{
+  bool success = 1;
+  string message = 3;
+}

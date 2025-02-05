@@ -1,0 +1,8 @@
+db:
+  host: ${DB_HOST}
+  port: ${DB_PORT}
+  user: ${DB_USER}
+  password: ${DB_PASSWORD}
+  database: ${USER_DB}
+app:
+  port: ${STREAMING_PORT}
