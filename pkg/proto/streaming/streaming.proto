@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+package streaming;
+
+option go_package = "./streaming";
+
+service StreamingService {
+// rpc UploadVideo (stream UploadVideoReq) returns (UploadVideoRes);
+// 这行定义了一个客户端流式 RPC 方法。在 gRPC 中，这意味着客户端可以以流的形式发送多个 UploadVideoReq 消息，而服务端在接收完所有消息后只返回一个 UploadVideoRes 响应。
+// 具体来说：
+// 	•	Stream 输入：
+// 客户端可以分多次发送消息（比如先发送视频元数据，再连续发送多个视频数据块）。这种方式特别适合传输大文件，因为你不需要一次性将整个文件加载到内存中。
+// 	•	单一响应：
+// 服务端在接收完所有消息后，处理完毕，然后只返回一次响应（例如上傳成功与否的信息）。
+// 因此，stream 的用途主要是为了支持大文件或数据分块上传，确保传输过程更高效、稳定，并能减少内存占用。如果你采用这种模式，客户端无需额外操作，只需要按顺序发送消息即可；服务端则依次处理这些消息，直到收到流结束信号，再返回响应。
+    rpc UploadVideo (stream UploadVideoReq) returns (UploadVideoRes); 
+    rpc GetVideo (GetVideoReq) returns (GetVideoRes);
+    rpc Search (SearchReq) returns (SearchRes);
+    rpc GetRecommendations (GetRecommendationsReq) returns (GetRecommendationsRes);
+    rpc GetIndexM3U8 (GetIndexM3U8Req) returns (GetIndexM3U8Res);
+    rpc GetHlsSegment (GetHlsSegmentReq) returns (GetHlsSegmentRes);
+}
+
+// UploadVideo 請求消息，使用 oneof 區分元資料與檔案塊
+message UploadVideoReq {
+    oneof data {
+        // 當第一次發送時，傳送影片的元資料
+        VideoMetadata metadata = 1;
+        // 隨後發送檔案內容塊
+        VideoChunk chunk = 2;
+    }
+}
+
+  // 影片元資料：上傳時的標題、描述與影片類型
+message VideoMetadata {
+    string title = 1;
+    string description = 2;
+    string type = 3; // "short" 或 "long"
+    string fileName = 4; // "short" 或 "long"
+}
+
+  // 影片內容塊，分段傳送檔案數據
+message VideoChunk {
+    bytes content = 1;
+}
+
+  // UploadVideo 的回應消息
+message UploadVideoRes {
+    bool success = 1;
+    string message = 2;
+    int64 video_id = 3;
+}
+
+message GetVideoReq {
+    string video_id = 1;
+}
+
+message GetVideoRes {
+    bool success = 1;
+    int64 video_id = 2;
+    string title = 3;
+    string hls_url = 4;
+    string error = 5;
+}
+
+message SearchReq {
+    string key_word = 1;
+}
+
+message SearchRes {
+    bool success = 1;
+    string error = 2;
+    repeated SearchFeedBack video = 3;
+}
+
+message SearchFeedBack {
+    int64 video_id = 1;
+	string title = 2;
+	string description = 3;
+	string fileName = 4; // 存於 MinIO 上的 object key
+	string type = 5; // "short" 或 "long"
+	string status  = 6; // "uploaded", "processing", "ready"
+	int64 view_cCount = 7;   // 瀏覽次數
+}
+
+message GetRecommendationsReq {
+    int64 limit = 1;
+}
+
+message GetRecommendationsRes {
+    bool success = 1;
+    string error = 2;
+    repeated SearchFeedBack video = 3;
+}
+
+// 用於取得 m3u8 播放清單的請求與回應
+message GetIndexM3U8Req {
+    string video_id = 1;
+}
+
+message GetIndexM3U8Res {
+    bool success = 1;
+    string error = 2;
+    bytes content = 3; // m3u8 檔案內容的二進位資料
+}
+
+// 用於取得 TS 分段檔案的請求與回應
+message GetHlsSegmentReq {
+    string video_id = 1;
+    string segment = 2;
+}
+
+message GetHlsSegmentRes {
+    bool success = 1;
+    string error = 2;
+    bytes content = 3; // TS 段檔案內容的二進位資料
+}

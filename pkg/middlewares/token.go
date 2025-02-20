@@ -11,6 +11,9 @@ const (
 	//QueryToken token in query name
 	QueryToken = "auth"
 
+	//CookieToken token in cookie name
+	CookieToken="auth_token"
+
 	//TokenMemberID get member form token, set c.locals name
 	TokenMemberID = "MemberID"
 	//TokenRole get role form token, set c.locals name
@@ -22,6 +25,18 @@ func JWTMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Get token from Authorization header
 		tokenStr := c.Query(QueryToken)
+
+		// 如果查詢參數中沒有 token，則嘗試從 Cookie 中獲取
+		if tokenStr == "" {
+			tokenStr = c.Cookies(CookieToken)
+		}
+
+		// 如果仍然沒有 token，則返回未授權錯誤
+		if tokenStr == "" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Missing token",
+			})
+		}
 
 		// Parse and validate token
 		token, err := jwt.ParseWithClaims(tokenStr, &t_token.Claims{}, func(token *jwt.Token) (interface{}, error) {

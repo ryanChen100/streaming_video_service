@@ -67,7 +67,7 @@ func (r *RedisPubSub) Subscribe(ctx context.Context, channel string, handler fun
 				}
 				handler(resp)
 			case <-ctx.Done():
-				logger.Log.Infof("%s , sub close", channel)
+				logger.Log.Info(fmt.Sprintf("%s , sub close", channel))
 				// 當 ctx 被取消時，退出循環並關閉訂閱
 				sub.Close()
 			}

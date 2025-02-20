@@ -10,7 +10,7 @@ WHERE NOT EXISTS (
 -- 创建表
 CREATE TABLE IF NOT EXISTS member (
     id SERIAL PRIMARY KEY,
-    member_id VARCHAR(255) NOT NULL UNIQUE,
+    member_id UUID NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     status SMALLINT,
@@ -51,3 +51,22 @@ CREATE TRIGGER update_member_timestamps
 BEFORE INSERT OR UPDATE ON member
 FOR EACH ROW
 EXECUTE FUNCTION update_member_timestamps();
+
+SELECT 'CREATE DATABASE streaming_db'
+WHERE NOT EXISTS (
+    SELECT FROM pg_database WHERE datname = 'streaming_db'
+) \gexec
+
+-- 切换到目标数据库
+\c streaming_db;
+
+-- 创建表
+CREATE TABLE IF NOT EXISTS videos (
+    id          SERIAL PRIMARY KEY,
+    title       VARCHAR(255),
+    description TEXT,
+    file_name   TEXT,            -- 對應 FileName, 存 MinIO 物件名稱
+    type        VARCHAR(50),     -- 影片型態: "short" or "long"
+    status      VARCHAR(50),     -- "uploaded", "processing", "ready"
+    view_count  INT DEFAULT 0    -- 預設0次觀看
+);

@@ -56,21 +56,21 @@ func (h *ChatWebsocketHandler) HandleConnection(ctx context.Context, conn *webso
 	//client發出close
 	//fiber會自動處理(在read msg 回傳err),故需要SetCloseHandler另外接出
 	conn.SetCloseHandler(func(code int, text string) error {
-		logger.Log.Infof("WebSocket closed: %s", conn.RemoteAddr())
+		logger.Log.Infof("WebSocket closed:", conn.RemoteAddr())
 		return nil
 	})
 
 	//server發出ping之後client連線正常會回pong
 	//fiber會自動處理回傳pong,故需要SetPongHandler另外接出
 	conn.SetPongHandler(func(appData string) error {
-		logger.Log.Infof("Received PONG: %s", appData)
+		logger.Log.Infof("Received PONG:", appData)
 		return nil
 	})
 
 	//client發出ping
 	//fiber會自動處理ping,故需要SetPingHandler另外接出
 	conn.SetPingHandler(func(appData string) error {
-		logger.Log.Infof("Received PING: %s\n", appData)
+		logger.Log.Infof("Received PING:", appData)
 		// 如果要手動回 Pong，可以：
 		return conn.WriteControl(
 			websocket.PongMessage,
@@ -98,7 +98,7 @@ func (h *ChatWebsocketHandler) HandleConnection(ctx context.Context, conn *webso
 				}
 				logger.Log.Infof("%s Ping sent", memberID)
 			case <-ctxClose.Done():
-				logger.Log.Infof("Ping goroutine cancelled for member: %s", memberID)
+				logger.Log.Infof("Ping goroutine cancelled for member:", memberID)
 				return
 			}
 		}
@@ -350,7 +350,7 @@ func (h *ChatWebsocketHandler) textMessageAction(ctx context.Context, conn *webs
 func (h *ChatWebsocketHandler) sendResponse(conn *websocket.Conn, resp domain.WSResponse) {
 	b, _ := json.Marshal(resp)
 	if err := conn.WriteMessage(websocket.TextMessage, b); err != nil {
-		logger.Log.Errorf("write message error: %v", err)
+		logger.Log.Errorf("write message error:", err)
 	}
 }
 
@@ -370,5 +370,5 @@ func closeWebSocketConnection(conn *websocket.Conn, code int, reason string) {
 		logger.Log.Errorf("Failed to send CloseMessage: %v", err)
 	}
 	conn.Close()
-	logger.Log.Infof("WebSocket connection closed: %s", conn.RemoteAddr())
+	logger.Log.Infof("WebSocket connection closed:", conn.RemoteAddr())
 }

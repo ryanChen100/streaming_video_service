@@ -249,6 +249,274 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/streaming/recommendations": {
+            "get": {
+                "description": "Retrieves recommended videos based on view counts.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Streaming"
+                ],
+                "summary": "Get recommended videos",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Number of recommendations",
+                        "name": "limit",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Recommendations response",
+                        "schema": {
+                            "$ref": "#/definitions/streaming.GetRecommendationsRes"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/streaming/search": {
+            "get": {
+                "description": "Searches for videos by keyword.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Streaming"
+                ],
+                "summary": "Search videos",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search keyword",
+                        "name": "key_word",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Search response",
+                        "schema": {
+                            "$ref": "#/definitions/streaming.SearchRes"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/streaming/upload": {
+            "post": {
+                "description": "Uploads a video file by first sending video metadata then streaming video chunks",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Streaming"
+                ],
+                "summary": "Upload Video via gRPC streaming",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video Title",
+                        "name": "title",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Video Description",
+                        "name": "description",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Video Type (short or long)",
+                        "name": "type",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Video File",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Upload success response",
+                        "schema": {
+                            "$ref": "#/definitions/streaming.UploadVideoRes"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/streaming/video/hls/{video_id}/index": {
+            "get": {
+                "description": "Retrieves the m3u8 playlist file content.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/vnd.apple.mpegurl"
+                ],
+                "tags": [
+                    "Streaming"
+                ],
+                "summary": "Get HLS index (m3u8) playlist",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video ID",
+                        "name": "video_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "m3u8 playlist content",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/streaming/video/hls/{video_id}/{segment}": {
+            "get": {
+                "description": "Retrieves a TS segment file content for video streaming.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "video/mp2t"
+                ],
+                "tags": [
+                    "Streaming"
+                ],
+                "summary": "Get HLS segment (TS file)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video ID",
+                        "name": "video_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Segment filename",
+                        "name": "segment",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "TS segment file content",
+                        "schema": {
+                            "type": "bytes"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/streaming/video/{video_id}": {
+            "get": {
+                "description": "Retrieves video streaming info including the HLS URL for playback.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Streaming"
+                ],
+                "summary": "Get video streaming info",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Video ID",
+                        "name": "video_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Get video response",
+                        "schema": {
+                            "$ref": "#/definitions/streaming.GetVideoRes"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Video not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -282,6 +550,104 @@ const docTemplate = `{
                 },
                 "success": {
                     "type": "boolean"
+                }
+            }
+        },
+        "streaming.GetRecommendationsRes": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "video": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/streaming.SearchFeedBack"
+                    }
+                }
+            }
+        },
+        "streaming.GetVideoRes": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "hls_url": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "video_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "streaming.SearchFeedBack": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "fileName": {
+                    "description": "存於 MinIO 上的 object key",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "\"uploaded\", \"processing\", \"ready\"",
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "description": "\"short\" 或 \"long\"",
+                    "type": "string"
+                },
+                "video_id": {
+                    "type": "integer"
+                },
+                "view_cCount": {
+                    "description": "瀏覽次數",
+                    "type": "integer"
+                }
+            }
+        },
+        "streaming.SearchRes": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "video": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/streaming.SearchFeedBack"
+                    }
+                }
+            }
+        },
+        "streaming.UploadVideoRes": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                },
+                "video_id": {
+                    "type": "integer"
                 }
             }
         }

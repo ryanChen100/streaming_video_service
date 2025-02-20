@@ -19,3 +19,23 @@ type MongoDB struct {
 	Client   *mongo.Client
 	Database *mongo.Database
 }
+
+// MinIOConnection definition minio
+type MinIOConnection struct {
+	Endpoint string
+	User string
+	Password string
+	BucketName string
+	UseSSL bool
+
+	RetryCount    int
+	RetryInterval time.Duration
+}
+
+// KafkaConnection definition kafka
+type KafkaConnection struct {
+	Brokers []string
+	Topic string
+	RetryCount    int
+	RetryInterval time.Duration
+}

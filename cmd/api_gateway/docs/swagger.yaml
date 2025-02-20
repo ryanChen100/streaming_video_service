@@ -20,6 +20,71 @@ definitions:
       success:
         type: boolean
     type: object
+  streaming.GetRecommendationsRes:
+    properties:
+      error:
+        type: string
+      success:
+        type: boolean
+      video:
+        items:
+          $ref: '#/definitions/streaming.SearchFeedBack'
+        type: array
+    type: object
+  streaming.GetVideoRes:
+    properties:
+      error:
+        type: string
+      hls_url:
+        type: string
+      success:
+        type: boolean
+      title:
+        type: string
+      video_id:
+        type: integer
+    type: object
+  streaming.SearchFeedBack:
+    properties:
+      description:
+        type: string
+      fileName:
+        description: 存於 MinIO 上的 object key
+        type: string
+      status:
+        description: '"uploaded", "processing", "ready"'
+        type: string
+      title:
+        type: string
+      type:
+        description: '"short" 或 "long"'
+        type: string
+      video_id:
+        type: integer
+      view_cCount:
+        description: 瀏覽次數
+        type: integer
+    type: object
+  streaming.SearchRes:
+    properties:
+      error:
+        type: string
+      success:
+        type: boolean
+      video:
+        items:
+          $ref: '#/definitions/streaming.SearchFeedBack'
+        type: array
+    type: object
+  streaming.UploadVideoRes:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+      video_id:
+        type: integer
+    type: object
 info:
   contact: {}
 paths:
@@ -177,4 +242,183 @@ paths:
       summary: 注册新用户
       tags:
       - Members
+  /streaming/recommendations:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves recommended videos based on view counts.
+      parameters:
+      - description: Number of recommendations
+        in: query
+        name: limit
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Recommendations response
+          schema:
+            $ref: '#/definitions/streaming.GetRecommendationsRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Get recommended videos
+      tags:
+      - Streaming
+  /streaming/search:
+    get:
+      consumes:
+      - application/json
+      description: Searches for videos by keyword.
+      parameters:
+      - description: Search keyword
+        in: query
+        name: key_word
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Search response
+          schema:
+            $ref: '#/definitions/streaming.SearchRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Search videos
+      tags:
+      - Streaming
+  /streaming/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a video file by first sending video metadata then streaming
+        video chunks
+      parameters:
+      - description: Video Title
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: Video Description
+        in: formData
+        name: description
+        required: true
+        type: string
+      - description: Video Type (short or long)
+        in: formData
+        name: type
+        required: true
+        type: string
+      - description: Video File
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Upload success response
+          schema:
+            $ref: '#/definitions/streaming.UploadVideoRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Upload Video via gRPC streaming
+      tags:
+      - Streaming
+  /streaming/video/{video_id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves video streaming info including the HLS URL for playback.
+      parameters:
+      - description: Video ID
+        in: path
+        name: video_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Get video response
+          schema:
+            $ref: '#/definitions/streaming.GetVideoRes'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Video not found
+          schema:
+            type: string
+      summary: Get video streaming info
+      tags:
+      - Streaming
+  /streaming/video/hls/{video_id}/{segment}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a TS segment file content for video streaming.
+      parameters:
+      - description: Video ID
+        in: path
+        name: video_id
+        required: true
+        type: string
+      - description: Segment filename
+        in: path
+        name: segment
+        required: true
+        type: string
+      produces:
+      - video/mp2t
+      responses:
+        "200":
+          description: TS segment file content
+          schema:
+            type: bytes
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Get HLS segment (TS file)
+      tags:
+      - Streaming
+  /streaming/video/hls/{video_id}/index:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the m3u8 playlist file content.
+      parameters:
+      - description: Video ID
+        in: path
+        name: video_id
+        required: true
+        type: string
+      produces:
+      - application/vnd.apple.mpegurl
+      responses:
+        "200":
+          description: m3u8 playlist content
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Get HLS index (m3u8) playlist
+      tags:
+      - Streaming
 swagger: "2.0"

@@ -1,0 +1,22 @@
+// syntax = "proto3";
+
+// package chat;
+
+// option go_package = "./chat";
+
+// service ChatService {
+//   rpc SendMessage(SendMessageReq) returns (SendMessageRes) {
+//     option (google.api.http) = {
+//       post: "/v1/chat/send"
+//       body: "*"
+//     };
+//   }
+// }
+
+// message SendMessageReq {
+//   string message = 1;
+// }
+
+// message SendMessageRes {
+//   string response = 1;
+// }

@@ -131,7 +131,7 @@ func (l *LogInfo) Info(msg string, fields ...zap.Field) {
 
 // Infof 输出 INFO 级别日志
 func (l *LogInfo) Infof(msg string, info interface{}, fields ...zap.Field) {
-	l.log.Info(fmt.Sprintf("%s : %v", msg, info), fields...)
+	l.log.Info(fmt.Sprintf("%s %v", msg, info), fields...)
 }
 
 // Error 输出 ERROR 级别日志
@@ -141,7 +141,7 @@ func (l *LogInfo) Error(msg string, fields ...zap.Field) {
 
 // Errorf 输出 ERROR 级别日志
 func (l *LogInfo) Errorf(msg string, err error, fields ...zap.Field) {
-	l.log.Error(fmt.Sprintf("%s : %v", msg, err), fields...)
+	l.log.Error(fmt.Sprintf("%s %v", msg, err), fields...)
 }
 
 // Debug 输出 DEBUG 级别日志

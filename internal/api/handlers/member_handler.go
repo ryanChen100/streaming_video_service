@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"streaming_video_service/pkg/config"
 	"streaming_video_service/pkg/logger"
 	"streaming_video_service/pkg/middlewares"
 	memberpb "streaming_video_service/pkg/proto/member"
@@ -93,6 +94,17 @@ func (h *MemberHandler) Login(c *fiber.Ctx) error {
 	if err != nil || !resp.Success {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": resp.GetMessage()})
 	}
+
+	// 设置 Cookie
+	c.Cookie(&fiber.Cookie{
+		Name:     middlewares.CookieToken, // Cookie 名称
+		Value:    resp.GetToken(),         // JWT Token
+		Path:     "/",                     // 适用于所有路径
+		HTTPOnly: true,                    // 防止 JS 访问，提升安全性
+		Secure:   config.IsProduction(),   // 仅在 HTTPS 连接下传输
+		SameSite: "Strict",                // 避免 CSRF 攻击
+		MaxAge:   3600,                    // 1 小时过期时间
+	})
 
 	logger.Log.Info(fmt.Sprintf("MemberClient.Login %v", resp))
 	return c.JSON(fiber.Map{"token": resp.GetToken(), "message": "login success"})

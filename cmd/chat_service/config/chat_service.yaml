@@ -14,4 +14,4 @@ redis:
 
 member:
   service_port: ${MEMBER_SERVICE_PORT}
-  service_name: ${MEMBER_SERVICE}
+  service_ip: ${MEMBER_SERVICE_IP}

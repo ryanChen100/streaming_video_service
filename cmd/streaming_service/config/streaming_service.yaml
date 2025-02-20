@@ -1,8 +1,37 @@
-db:
-  host: ${DB_HOST}
-  port: ${DB_PORT}
-  user: ${DB_USER}
-  password: ${DB_PASSWORD}
-  database: ${USER_DB}
-app:
-  port: ${STREAMING_PORT}
+port: ${STREAMING_SERVICE_PORT}
+ip: ${STREAMING_SERVICE_IP}
+session_ttl: 5 #設置 jwt和session過期時間（m）
+
+pg:
+  host: ${POSTGRES_HOST}
+  port: ${POSTGRES_PORT}
+  user: ${POSTGRES_USER}
+  password: ${POSTGRES_PASSWORD}
+  database: ${POSTGRES_STREAMING_DB}
+  retry_interval: 5 #重試延遲（s）
+  retry_count: 3 #重試連線postgreSQL（次）
+
+minio:
+  host: ${MINIO_IP}
+  port: ${MINIO_PORT}
+  user: ${MINIO_ROOT_USER}
+  password: ${MINIO_ROOT_PASSWORD}
+  bucket_name: video-bucket #video_bucket失敗，改為video-bucket
+  use_ssl: false
+  retry_interval: 5 #重試延遲（s）
+  retry_count: 3 #重試連線（次）
+
+rabbit_mq:
+  host: ${RABBITMQ_IP}
+  port: ${RABBITMQ_AMQP_PORT}
+  user: ${RABBITMQ_DEFAULT_USER}
+  password: ${RABBITMQ_DEFAULT_PASS}
+  retry_interval: 5 #重試延遲（s）
+  retry_count: 3 #重試連線（次）
+
+# kafka:
+#   brokers:
+#     - ${KAFKA_IP}:${KAFKA_PORT}
+#   topic:
+#   retry_interval: 5 #重試延遲（s）
+#   retry_count: 3 #重試連線postgreSQL（次）

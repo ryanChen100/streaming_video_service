@@ -18,8 +18,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	fiber_log "github.com/gofiber/fiber/v2/middleware/logger"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/connectivity"
 )
 
 func main() {
@@ -54,24 +52,28 @@ func main() {
 	}
 
 	// 4.建立 gRPC 连接
-	client, err := grpc.Dial(cfg.MemberService.Name+":"+cfg.MemberService.Port, grpc.WithInsecure())
+	// client, err := grpc.Dial(cfg.MemberService.IP+":"+cfg.MemberService.Port, grpc.WithInsecure())
+	// if err != nil {
+	// 	logger.Log.Fatal(fmt.Sprintf("Failed to connect: %v", err))
+	// }
+	// defer client.Close()
+
+	// go func() {
+	// 	for {
+	// 		state := client.GetState()
+	// 		logger.Log.Info(fmt.Sprintf("Connection state: %s", state))
+	// 		if state == connectivity.Ready {
+	// 			logger.Log.Info("Connection is READY")
+	// 			break
+	// 		}
+	// 		time.Sleep(500 * time.Millisecond)
+	// 	}
+	// }()
+
+	client, err := database.CreateGRPCClient(cfg.MemberService.IP + ":" + cfg.MemberService.Port)
 	if err != nil {
-		logger.Log.Fatal(fmt.Sprintf("Failed to connect: %v", err))
+		log.Fatalf("create member GRPC err : %v", err)
 	}
-	defer client.Close()
-
-	go func() {
-		for {
-			state := client.GetState()
-			logger.Log.Info(fmt.Sprintf("Connection state: %s", state))
-			if state == connectivity.Ready {
-				logger.Log.Info("Connection is READY")
-				break
-			}
-			time.Sleep(500 * time.Millisecond)
-		}
-	}()
-
 	logger.Log.Info(fmt.Sprintf("grpc connect :%v", client.GetState()))
 	memberClient := memberpb.NewMemberServiceClient(client)
 

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
@@ -40,38 +41,55 @@ type EnvInfo struct {
 }
 
 // EnvConfig 集合服務端口
-var EnvConfig = initEnv()
+var (
+	EnvConfig = initEnv()
+	env       string
+	envConfig EnvInfo
+	once      sync.Once
+)
 
 func initEnv() EnvInfo {
+	once.Do(func() {
+		if err := godotenv.Load(getEnvPath()); err != nil {
+			log.Printf("Warning: Could not load .env file: %v", err)
+		}
+		//	取得當前環境
+		env = os.Getenv("ENV")
 
-	if err := godotenv.Load(getEnvPath()); err != nil {
-		log.Printf("Warning: Could not load .env file: %v", err)
+		envConfig = EnvInfo{
+			APIGateway:    os.Getenv("API_GATEWAY"),
+			MemberService: os.Getenv("MEMBER_SERVICE"),
+			ChatService:   os.Getenv("CHAT_SERVICE"),
+			Streaming:     os.Getenv("STREAMING_SERVICE"),
+
+			APIGatewayPort:    os.Getenv("API_GATEWAY_PORT"),
+			MemberServicePort: os.Getenv("MEMBER_SERVICE_PORT"),
+			ChatServicePort:   os.Getenv("CHAT_SERVICE_PORT"),
+			StreamingPort:     os.Getenv("STREAMING_SERVICE_PORT"),
+
+			APIGatewayYAMLPath:    os.Getenv("API_GATEWAY_YAML"),
+			MemberServiceYAMLPath: os.Getenv("MEMBER_SERVICE_YAML"),
+			ChatServiceYAMLPath:   os.Getenv("CHAT_SERVICE_YAML"),
+			StreamingYAMLPath:     os.Getenv("STREAMING_SERVICE_YAML"),
+
+			APIGatewayLogPath:    os.Getenv("API_GATEWAY_LOG"),
+			MemberServiceLogPath: os.Getenv("MEMBER_SERVICE_LOG"),
+			ChatServiceLogPath:   os.Getenv("CHAT_SERVICE_LOG"),
+			StreamingLogPath:     os.Getenv("STREAMING_SERVICE_LOG"),
+		}
+		fmt.Println("Service:", envConfig)
+	})
+
+	return envConfig
+}
+
+// IsProduction check run env
+func IsProduction() bool {
+	var b bool
+	if env == "production" {
+		b = true
 	}
-
-	var e EnvInfo
-
-	e.APIGateway = os.Getenv("API_GATEWAY")
-	e.MemberService = os.Getenv("MEMBER_SERVICE")
-	e.ChatService = os.Getenv("CHAT_SERVICE")
-	e.Streaming = os.Getenv("STREAMING")
-
-	e.APIGatewayPort = os.Getenv("API_GATEWAY_PORT")
-	e.MemberServicePort = os.Getenv("MEMBER_SERVICE_PORT")
-	e.ChatServicePort = os.Getenv("CHAT_SERVICE_PORT")
-	e.StreamingPort = os.Getenv("STREAMING_PORT")
-
-	e.APIGatewayYAMLPath = os.Getenv("API_GATEWAY_YAML")
-	e.MemberServiceYAMLPath = os.Getenv("MEMBER_SERVICE_YAML")
-	e.ChatServiceYAMLPath = os.Getenv("CHAT_SERVICE_YAML")
-	e.StreamingYAMLPath = os.Getenv("STREAMING_YAML")
-
-	e.APIGatewayLogPath = os.Getenv("API_GATEWAY_LOG")
-	e.MemberServiceLogPath = os.Getenv("MEMBER_SERVICE_LOG")
-	e.ChatServiceLogPath = os.Getenv("CHAT_SERVICE_LOG")
-	e.StreamingLogPath = os.Getenv("STREAMING_LOG")
-	fmt.Println("Service:", e)
-
-	return e
+	return b
 }
 
 // LoadConfig 加載配置

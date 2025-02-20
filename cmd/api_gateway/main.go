@@ -4,52 +4,62 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 
 	_ "streaming_video_service/cmd/api_gateway/docs" // 引入生成的 Swagger 文档
 	"streaming_video_service/internal/api/handlers"
 	"streaming_video_service/internal/api/router"
 	"streaming_video_service/pkg/config"
+	"streaming_video_service/pkg/database"
 	"streaming_video_service/pkg/logger"
 	memberpb "streaming_video_service/pkg/proto/member"
+	streaming_pb "streaming_video_service/pkg/proto/streaming"
 
 	"github.com/gofiber/fiber/v2"
 	fiber_log "github.com/gofiber/fiber/v2/middleware/logger"
 	"go.uber.org/zap"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/connectivity"
 )
 
 func main() {
 	logger.Log = logger.Initialize(config.EnvConfig.APIGateway, config.EnvConfig.APIGatewayLogPath)
 	cfg := config.LoadConfig[config.APIGateway](config.EnvConfig.APIGateway, config.EnvConfig.APIGatewayYAMLPath)
 	// 建立 gRPC 连接
-	client, err := grpc.Dial(cfg.MemberService.Name+":"+cfg.MemberService.Port, grpc.WithInsecure())
+	// client, err := grpc.Dial(cfg.MemberService.Name+":"+cfg.MemberService.Port, grpc.WithInsecure())
+	// if err != nil {
+	// 	logger.Log.Fatal(fmt.Sprintf("Failed to connect: %v", err))
+	// }
+	// defer client.Close()
+
+	// // 检查连接状态
+	// go func() {
+	// 	for {
+	// 		state := client.GetState()
+	// 		logger.Log.Info(fmt.Sprintf("Connection state: %s", state))
+	// 		if state == connectivity.Ready {
+	// 			logger.Log.Info("Connection is READY")
+	// 			break
+	// 		}
+	// 		time.Sleep(500 * time.Millisecond)
+	// 	}
+	// }()
+	memberGRPC, err := database.CreateGRPCClient(cfg.MemberService.IP + ":" + cfg.MemberService.Port)
 	if err != nil {
-		logger.Log.Fatal(fmt.Sprintf("Failed to connect: %v", err))
+		log.Fatalf("create member GRPC err : %v", err)
 	}
-	defer client.Close()
-
-	// 检查连接状态
-	go func() {
-		for {
-			state := client.GetState()
-			logger.Log.Info(fmt.Sprintf("Connection state: %s", state))
-			if state == connectivity.Ready {
-				logger.Log.Info("Connection is READY")
-				break
-			}
-			time.Sleep(500 * time.Millisecond)
-		}
-	}()
-
-	logger.Log.Info(fmt.Sprintf("grpc connect :%v", client.GetState()))
+	defer memberGRPC.Close()
 	// 使用 gRPC 连接创建 UserService 客户端
-	memberClient := memberpb.NewMemberServiceClient(client)
-
+	memberClient := memberpb.NewMemberServiceClient(memberGRPC)
 	// 初始化 UserHandler
 	memberHandler := handlers.NewMemberHandler(memberClient)
+
+	streamingGRPC, err := database.CreateGRPCClient(cfg.StreamingService.IP + ":" + cfg.StreamingService.Port)
+	if err != nil {
+		log.Fatalf("create streaming GRPC err : %v", err)
+	}
+	defer streamingGRPC.Close()
+	// 使用 gRPC 连接创建 UserService 客户端
+	streamingClient := streaming_pb.NewStreamingServiceClient(streamingGRPC)
+	// 初始化 UserHandler
+	streamingHandler := handlers.NewStreamingHandler(streamingClient)
 
 	// 创建 Fiber 应用
 	r := fiber.New()
@@ -65,7 +75,7 @@ func main() {
 	}))
 
 	// 注册路由
-	router.RegisterRoutes(r, memberHandler)
+	router.RegisterRoutes(r, memberHandler, streamingHandler)
 
 	// 启动服务器
 	if err := r.Listen(":" + cfg.Port); err != nil {

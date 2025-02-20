@@ -7,12 +7,12 @@ import (
 )
 
 // 因拆分微服務。此程式用於init swagger
-// swag init output ./docs
+// swag init --output ./cmd/api_gateway/docs
 func main() {
 	// 创建 Fiber 应用
 	app := fiber.New()
 
 	// 注册路由
-	router.RegisterRoutes(app, nil)
+	router.RegisterRoutes(app, nil, nil)
 
 }

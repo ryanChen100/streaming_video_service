@@ -1,4 +1,7 @@
 port: ${API_GATEWAY_PORT}
 member:
+  service_ip: ${MEMBER_SERVICE_IP}
   service_port: ${MEMBER_SERVICE_PORT}
-  service_name: ${MEMBER_SERVICE}
+streaming:
+  service_ip: ${STREAMING_SERVICE_IP}
+  service_port: ${STREAMING_SERVICE_PORT}
