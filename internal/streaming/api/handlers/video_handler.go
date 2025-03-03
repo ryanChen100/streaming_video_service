@@ -23,8 +23,8 @@ import (
 // VideoHandler definition video handler
 // VideoHandler 定義影片上傳處理器
 type VideoHandler struct {
-	MinioClient   *database.MinIOClient
-	VideoRepo     *repository.VideoRepo
+	MinioClient   database.MinIOClientRepo
+	VideoRepo     repository.VideoRepo
 	RabbitChannel *amqp.Channel // 用於發布轉碼工作訊息的 RabbitMQ Channel
 }
 
@@ -52,12 +52,12 @@ func (h *VideoHandler) UploadVideo(c *fiber.Ctx) error {
 	}
 
 	// 4. 建立影片記錄（狀態預設為 "uploaded"）
-	video := repository.Video{
+	video := domain.Video{
 		Title:       title,
 		Description: desc,
 		FileName:    fileHeader.Filename, // 先暫存用，後續更新為 MinIO 的 object key
 		Type:        videoType,
-		Status:      "uploaded",
+		Status:     string(domain.VideoUpload),
 	}
 	if err := h.VideoRepo.Create(&video); err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "資料庫建立影片失敗"})
@@ -188,11 +188,11 @@ func (h *VideoHandler) GetIndexM3U8(c *fiber.Ctx) error {
 	objectKey := fmt.Sprintf("processed/%d/index.m3u8", id)
 	ctx := context.Background()
 
-	obj, err := h.MinioClient.Client.GetObject(ctx, h.MinioClient.BucketName, objectKey, minio.GetObjectOptions{})
+	obj, err := h.MinioClient.GetObject(ctx, objectKey, minio.GetObjectOptions{})
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).SendString("無法取得 m3u8 檔案: " + err.Error())
 	}
-	defer obj.Close()
+	// defer obj.Close()
 
 	// 設置正確的 Content-Type
 	c.Set("Content-Type", "application/vnd.apple.mpegurl")
@@ -209,11 +209,11 @@ func (h *VideoHandler) GetHlsSegment(c *fiber.Ctx) error {
 	id, _ := strconv.Atoi(idStr)
 	objectKey := fmt.Sprintf("processed/%d/%s", id, segment)
 	ctx := context.Background()
-	obj, err := h.MinioClient.Client.GetObject(ctx, h.MinioClient.BucketName, objectKey, minio.GetObjectOptions{})
+	obj, err := h.MinioClient.GetObject(ctx, objectKey, minio.GetObjectOptions{})
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).SendString("無法取得 TS 檔案: " + err.Error())
 	}
-	defer obj.Close()
+	// defer obj.Close()
 
 	c.Set("Content-Type", "video/mp2t")
 	if _, err := io.Copy(c.Response().BodyWriter(), obj); err != nil {
