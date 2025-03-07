@@ -2,6 +2,18 @@ package domain
 
 import "io"
 
+// VideoStatus definition video status
+type VideoStatus string
+
+const (
+	//VideoReady video status is ready
+	VideoReady VideoStatus = "ready"
+	//VideoUpload video status is upload
+	VideoUpload VideoStatus = "upload"
+	//VideoProcessing video status is processing
+	VideoProcessing VideoStatus = "processing"
+)
+
 // UploadVideoReq usecase upload video request
 type UploadVideoReq struct {
 	Title       string

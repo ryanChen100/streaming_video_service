@@ -1,7 +1,6 @@
 package router
 
 import (
-	"streaming_video_service/internal/api/comm"
 	"streaming_video_service/internal/api/handlers"
 	"streaming_video_service/pkg/middlewares"
 
@@ -17,8 +16,8 @@ import (
 // @BasePath /
 func RegisterRoutes(app *fiber.App, memberHandler *handlers.MemberHandler, streamingHandler *handlers.StreamingHandler) {
 	app.Get("/swagger/*", swagger.HandlerDefault)
-	app.Get("/", comm.ConnectCheck)
-	app.Post("/debug", comm.DebugLogFlag)
+	app.Get("/", handlers.ConnectCheck)
+	app.Post("/debug", handlers.DebugLogFlag)
 
 	memberRoutes := app.Group("/member")
 	memberRoutes.Post("/register", memberHandler.Register)

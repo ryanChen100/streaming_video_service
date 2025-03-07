@@ -11,22 +11,28 @@ import (
 	"go.uber.org/zap"
 )
 
+// PubSubRepository definition pub/sub
+type PubSubRepository interface {
+	Publish(channel string, message interface{}) error
+	Subscribe(ctx context.Context, channel string, handler func(resp domain.WSResponse)) error
+}
+
 // RedisPubSub definition redis pub/sub
-type RedisPubSub struct {
+type redisPubSub struct {
 	client *redis.Client
 	ctx    context.Context
 }
 
 // NewRedisPubSub create RedisPubSub
-func NewRedisPubSub(client *redis.Client) *RedisPubSub {
-	return &RedisPubSub{
+func NewRedisPubSub(client *redis.Client) PubSubRepository {
+	return &redisPubSub{
 		client: client,
 		ctx:    context.Background(),
 	}
 }
 
 // Publish 將 message 序列化後，發布到指定 channel
-func (r *RedisPubSub) Publish(channel string, message interface{}) error {
+func (r *redisPubSub) Publish(channel string, message interface{}) error {
 	// channel := fmt.Sprintf("chat:user:%s", userID)
 	data, err := json.Marshal(message)
 	if err != nil {
@@ -36,7 +42,7 @@ func (r *RedisPubSub) Publish(channel string, message interface{}) error {
 }
 
 // Subscribe 訂閱自己member ID，收到訊息後呼叫 handler 處理
-func (r *RedisPubSub) Subscribe(ctx context.Context, channel string, handler func(resp domain.WSResponse)) error {
+func (r *redisPubSub) Subscribe(ctx context.Context, channel string, handler func(resp domain.WSResponse)) error {
 	// channel := fmt.Sprintf("chat:user:%s", userID)
 	sub := r.client.Subscribe(r.ctx, channel)
 	go func() {

@@ -35,10 +35,14 @@ var (
 	Log *LogInfo
 )
 
-// var log = Initialize()
+// SetNewNop 替換 `logger.Log` 為 `zap.NewNop()` 來避免測試時的錯誤輸出
+func SetNewNop() {
+	Log = new(LogInfo)
+	Log.log = zap.NewNop()
+}
 
 // Initialize 按日期分文件的日志初始化
-func Initialize(serviceName, logDir string) *LogInfo {
+func Initialize(logDir string) *LogInfo {
 	var (
 		l = new(LogInfo)
 	)

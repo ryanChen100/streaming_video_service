@@ -13,6 +13,7 @@ import (
 	"streaming_video_service/pkg/logger"
 	memberpb "streaming_video_service/pkg/proto/member"
 	streaming_pb "streaming_video_service/pkg/proto/streaming"
+	testtool "streaming_video_service/pkg/test_tool"
 
 	"github.com/gofiber/fiber/v2"
 	fiber_log "github.com/gofiber/fiber/v2/middleware/logger"
@@ -20,27 +21,11 @@ import (
 )
 
 func main() {
-	logger.Log = logger.Initialize(config.EnvConfig.APIGateway, config.EnvConfig.APIGatewayLogPath)
+	logger.Log = logger.Initialize(config.EnvConfig.APIGatewayLogPath)
 	cfg := config.LoadConfig[config.APIGateway](config.EnvConfig.APIGateway, config.EnvConfig.APIGatewayYAMLPath)
+	testtool.StartPprof()
+	
 	// 建立 gRPC 连接
-	// client, err := grpc.Dial(cfg.MemberService.Name+":"+cfg.MemberService.Port, grpc.WithInsecure())
-	// if err != nil {
-	// 	logger.Log.Fatal(fmt.Sprintf("Failed to connect: %v", err))
-	// }
-	// defer client.Close()
-
-	// // 检查连接状态
-	// go func() {
-	// 	for {
-	// 		state := client.GetState()
-	// 		logger.Log.Info(fmt.Sprintf("Connection state: %s", state))
-	// 		if state == connectivity.Ready {
-	// 			logger.Log.Info("Connection is READY")
-	// 			break
-	// 		}
-	// 		time.Sleep(500 * time.Millisecond)
-	// 	}
-	// }()
 	memberGRPC, err := database.CreateGRPCClient(cfg.MemberService.IP + ":" + cfg.MemberService.Port)
 	if err != nil {
 		log.Fatalf("create member GRPC err : %v", err)

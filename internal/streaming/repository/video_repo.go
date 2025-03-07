@@ -1,19 +1,21 @@
 package repository
 
 import (
+	"streaming_video_service/internal/streaming/domain"
+
 	"gorm.io/gorm"
 )
 
-// Video 定義影片模型
-type Video struct {
-	ID          uint `gorm:"primaryKey"`
-	Title       string
-	Description string
-	FileName    string // 存於 MinIO 上的 object key
-	Type        string // "short" 或 "long"
-	Status      string // "uploaded", "processing", "ready"
-	ViewCount   uint   // 瀏覽次數
-	// 可加入 UserID、CreatedAt 等欄位
+// VideoRepo definition get video info
+type VideoRepo interface {
+	AutoMigrate() error
+	Create(video *domain.Video) error
+	GetByID(id uint) (*domain.Video, error)
+	Update(video *domain.Video) error
+	FindByStatus(status string) ([]domain.Video, error)
+	SearchVideos(keyword string) ([]domain.Video, error)
+	RecommendVideos(limit int) ([]domain.Video, error)
+	// 其他 CRUD ...
 }
 
 // CDN 整合說明：
@@ -23,13 +25,13 @@ type Video struct {
 // 這樣播放器就能藉由 CDN 快速取得影片分段檔。
 
 // VideoRepo definition video repo
-type VideoRepo struct {
-	DB *gorm.DB
+type videoRepo struct {
+	db *gorm.DB
 }
 
 // NewVideoRepo create VideoRepo
-func NewVideoRepo(db *gorm.DB) *VideoRepo {
-	return &VideoRepo{DB: db}
+func NewVideoRepo(db *gorm.DB) VideoRepo {
+	return &videoRepo{db: db}
 }
 
 // AutoMigrate 是 GORM 提供的一个方法，它会自动根据你定义的模型（在这个例子中是 Video 模型）来更新数据库中的表结构。具体来说，AutoMigrate 会检查数据库中是否存在与模型字段相对应的列，并确保数据库的表结构与模型定义匹配。
@@ -41,8 +43,8 @@ func NewVideoRepo(db *gorm.DB) *VideoRepo {
 // 注意事项：
 //   - AutoMigrate 并不会自动删除数据库中的字段或表。如果你从模型中删除某些字段，AutoMigrate 不会自动删除数据库中的这些字段。
 //   - 它适用于开发阶段的数据库迁移，但在生产环境中使用时，需要小心，因为它不适合进行复杂的迁移操作（比如数据转换或字段删除）。
-func (r *VideoRepo) AutoMigrate() error {
-	return r.DB.AutoMigrate(&Video{})
+func (r *videoRepo) AutoMigrate() error {
+	return r.db.AutoMigrate(&domain.Video{})
 }
 
 // Create (video)：这行代码调用了 GORM 的 Create 方法，它会尝试将传入的 video 对象插入到数据库中。如果 video 对象的字段与 Video 表中的字段匹配，GORM 会自动将它们对应并插入数据库。
@@ -52,15 +54,15 @@ func (r *VideoRepo) AutoMigrate() error {
 // •	错误处理：如果插入过程中发生错误（例如数据库连接问题、字段类型不匹配等），该方法会返回错误
 // 使用场景：
 // •	你可以在需要将新的视频记录插入数据库时调用此方法，比如用户上传新视频时。
-func (r *VideoRepo) Create(video *Video) error {
-	return r.DB.Create(video).Error
+func (r *videoRepo) Create(video *domain.Video) error {
+	return r.db.Create(video).Error
 }
 
 // GetByID get Video by id
 // 在 GORM 中，First 是用来查询数据库中某个表的第一条符合条件的记录的方法。具体来说，r.DB.First(&v, id) 的作用是根据给定的 id 来查找 Video 表中 第一条匹配 id 的记录，并将结果赋值给 v。
-func (r *VideoRepo) GetByID(id uint) (*Video, error) {
-	var v Video
-	if err := r.DB.First(&v, id).Error; err != nil {
+func (r *videoRepo) GetByID(id uint) (*domain.Video, error) {
+	var v domain.Video
+	if err := r.db.First(&v, id).Error; err != nil {
 		return nil, err
 	}
 	return &v, nil
@@ -78,14 +80,14 @@ func (r *VideoRepo) GetByID(id uint) (*Video, error) {
 //  1. 使用 Update 更新单个字段：
 //     •	Update 只会更新指定的单个字段，比较高效。
 //     •	例如，如果你只想更新 title 字段： r.DB.Model(&video).Update("title", video.Title)
-func (r *VideoRepo) Update(video *Video) error {
-	return r.DB.Save(video).Error
+func (r *videoRepo) Update(video *domain.Video) error {
+	return r.db.Save(video).Error
 }
 
 // FindByStatus find videos by status
-func (r *VideoRepo) FindByStatus(status string) ([]Video, error) {
-	var videos []Video
-	if err := r.DB.Where("status = ?", status).Find(&videos).Error; err != nil {
+func (r *videoRepo) FindByStatus(status string) ([]domain.Video, error) {
+	var videos []domain.Video
+	if err := r.db.Where("status = ?", status).Find(&videos).Error; err != nil {
 		return nil, err
 	}
 	return videos, nil
@@ -94,10 +96,10 @@ func (r *VideoRepo) FindByStatus(status string) ([]Video, error) {
 // SearchVideos 利用 PostgreSQL 的 ILIKE 實作模糊搜尋（標題或描述包含 keyword）
 // LIKE：区分大小写的模糊匹配。在使用 LIKE 时，查询会区分字母的大小写。例如，如果你搜索 "hello"，它只能匹配 "hello"，而不会匹配 "HELLO" 或 "Hello"。
 // ILIKE：不区分大小写的模糊匹配。使用 ILIKE 时，它会忽略大小写，能匹配 "hello", "HELLO", "Hello" 等不同大小写的情况。
-func (r *VideoRepo) SearchVideos(keyword string) ([]Video, error) {
-	var videos []Video
+func (r *videoRepo) SearchVideos(keyword string) ([]domain.Video, error) {
+	var videos []domain.Video
 	like := "%" + keyword + "%"
-	if err := r.DB.Where("title ILIKE ? OR description ILIKE ?", like, like).Find(&videos).Error; err != nil {
+	if err := r.db.Where("(title ILIKE ? OR description ILIKE ?) AND status = ?", like, like, domain.VideoReady).Find(&videos).Error; err != nil {
 		return nil, err
 	}
 	return videos, nil
@@ -106,10 +108,10 @@ func (r *VideoRepo) SearchVideos(keyword string) ([]Video, error) {
 // RecommendVideos 依照 ViewCount 降序排序，返回熱門影片（簡單推薦）
 // 在 GORM 中，Order 方法用于对查询结果进行排序。它接收一个表示排序规则的字符串，并将其应用到查询中。排序规则可以是升序 (ASC) 或降序 (DESC)。
 // 先按 view_count 降序，再按 created_at 升序排序：r.DB.Order("view_count DESC, created_at ASC").Find(&videos)
-func (r *VideoRepo) RecommendVideos(limit int) ([]Video, error) {
-	var videos []Video
+func (r *videoRepo) RecommendVideos(limit int) ([]domain.Video, error) {
+	var videos []domain.Video
 	// 获取播放次数最多的前10个视频
-	if err := r.DB.Order("view_count DESC").Limit(limit).Find(&videos).Error; err != nil {
+	if err := r.db.Order("view_count DESC").Limit(limit).Find(&videos).Error; err != nil {
 		return nil, err
 	}
 	return videos, nil

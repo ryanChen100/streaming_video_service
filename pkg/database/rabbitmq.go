@@ -8,6 +8,21 @@ import (
 	"github.com/streadway/amqp"
 )
 
+// RabbitRepo definition rabbit repo
+type RabbitRepo interface {
+	GetRabbit() *amqp.Channel
+	Publish(exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error
+}
+
+type rabbitRepo struct {
+	channel *amqp.Channel
+}
+
+// NewRabbitRepository create a RabbitRepository
+func NewRabbitRepository(db *amqp.Channel) RabbitRepo {
+	return &rabbitRepo{channel: db}
+}
+
 // ConnectRabbitMQWithRetry 嘗試連線到 RabbitMQ，並使用指數回退進行重試。
 func ConnectRabbitMQWithRetry(d Connection) (*amqp.Connection, error) {
 	var conn *amqp.Connection
@@ -44,4 +59,12 @@ func GetRabbitMQChannelWithRetry(conn *amqp.Connection, maxRetries int, baseDela
 	}
 
 	return nil, fmt.Errorf("無法取得 RabbitMQ Channel，經過 %d 次嘗試: %v", maxRetries, err)
+}
+
+func (r *rabbitRepo) GetRabbit() *amqp.Channel {
+	return r.channel
+}
+
+func (r *rabbitRepo) Publish(exchange, key string, mandatory, immediate bool, msg amqp.Publishing) error {
+	return r.channel.Publish(exchange, key, mandatory, immediate, msg)
 }

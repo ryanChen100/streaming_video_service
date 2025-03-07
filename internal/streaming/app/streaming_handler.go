@@ -44,7 +44,11 @@ func (s *StreamingGRPCServer) UploadVideo(stream streaming_pb.StreamingService_U
 			// 後續傳送檔案區塊
 			_, err := fileBuffer.Write(data.Chunk.Content)
 			if err != nil {
-				return status.Errorf(codes.Internal, "寫入檔案區塊失敗: %v", err)
+				res := &streaming_pb.UploadVideoRes{
+					Success: false,
+					Message: "寫入檔案區塊失敗",
+				}
+				return stream.SendAndClose(res)
 			}
 		default:
 			return status.Errorf(codes.InvalidArgument, "未知的數據類型")
@@ -53,7 +57,19 @@ func (s *StreamingGRPCServer) UploadVideo(stream streaming_pb.StreamingService_U
 
 	// 檢查必須的元資料是否存在
 	if metadata == nil {
-		return status.Errorf(codes.InvalidArgument, "缺少影片元資料")
+		res := &streaming_pb.UploadVideoRes{
+			Success: false,
+			Message: "缺少影片元資料",
+		}
+		return stream.SendAndClose(res)
+	}
+
+	if fileBuffer.Bytes() == nil {
+		res := &streaming_pb.UploadVideoRes{
+			Success: false,
+			Message: "缺少寫入檔案區塊",
+		}
+		return stream.SendAndClose(res)
 	}
 
 	// 調用 usecase 層進行上傳處理
@@ -110,8 +126,8 @@ func (s *StreamingGRPCServer) Search(ctx context.Context, req *streaming_pb.Sear
 	}
 
 	videoRes := make([]*streaming_pb.SearchFeedBack, len(videos))
-	for _, video := range videos {
-		videoRes = append(videoRes, &streaming_pb.SearchFeedBack{
+	for index, video := range videos {
+		videoRes[index] = &streaming_pb.SearchFeedBack{
 			VideoId:     int64(video.ID),
 			Title:       video.Title,
 			Description: video.Description,
@@ -119,7 +135,7 @@ func (s *StreamingGRPCServer) Search(ctx context.Context, req *streaming_pb.Sear
 			Type:        video.Type,
 			Status:      video.Status, // "uploaded", "processing", "ready"
 			ViewCCount:  int64(video.ViewCount),
-		})
+		}
 	}
 	return &streaming_pb.SearchRes{
 		Success: true,
@@ -138,8 +154,8 @@ func (s *StreamingGRPCServer) GetRecommendations(ctx context.Context, req *strea
 	}
 
 	videoRes := make([]*streaming_pb.SearchFeedBack, len(videos))
-	for _, video := range videos {
-		videoRes = append(videoRes, &streaming_pb.SearchFeedBack{
+	for index, video := range videos {
+		videoRes[index] = &streaming_pb.SearchFeedBack{
 			VideoId:     int64(video.ID),
 			Title:       video.Title,
 			Description: video.Description,
@@ -147,7 +163,7 @@ func (s *StreamingGRPCServer) GetRecommendations(ctx context.Context, req *strea
 			Type:        video.Type,
 			Status:      video.Status, // "uploaded", "processing", "ready"
 			ViewCCount:  int64(video.ViewCount),
-		})
+		}
 	}
 	return &streaming_pb.GetRecommendationsRes{
 		Success: true,

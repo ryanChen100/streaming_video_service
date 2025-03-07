@@ -14,21 +14,20 @@ import (
 	"streaming_video_service/internal/streaming/repository"
 	"streaming_video_service/pkg/database"
 	"streaming_video_service/pkg/logger"
-
 	// Kafka 客戶端
-	"github.com/streadway/amqp" // RabbitMQ 客戶端
+	// RabbitMQ 客戶端
 )
 
 // Consumer 定義一個消息消費者，將所有必要的依賴注入進來
 type Consumer struct {
-	rabbitChannel *amqp.Channel
-	minioClient   *database.MinIOClient
-	videoRepo     *repository.VideoRepo
+	rabbitChannel database.RabbitRepo
+	minioClient   database.MinIOClientRepo
+	videoRepo     repository.VideoRepo
 	queueName     string
 }
 
 // NewConsumer 建構 Consumer 實例
-func NewConsumer(rabbitChannel *amqp.Channel, minioClient *database.MinIOClient, videoRepo *repository.VideoRepo, queueName string) *Consumer {
+func NewConsumer(rabbitChannel database.RabbitRepo, minioClient database.MinIOClientRepo, videoRepo repository.VideoRepo, queueName string) *Consumer {
 	return &Consumer{
 		rabbitChannel: rabbitChannel,
 		minioClient:   minioClient,
@@ -40,7 +39,7 @@ func NewConsumer(rabbitChannel *amqp.Channel, minioClient *database.MinIOClient,
 // StartConsumer 開始消費訊息，並處理轉碼工作
 func (c *Consumer) StartConsumer(ctx context.Context) {
 	// 設定消費該 queue
-	msgs, err := c.rabbitChannel.Consume(
+	msgs, err := c.rabbitChannel.GetRabbit().Consume(
 		c.queueName, // 使用依賴注入進來的 queue name
 		"",          // consumer tag，留空由系統分配
 		false,       // autoAck 為 false，使用手動確認
@@ -109,7 +108,7 @@ func (c *Consumer) StartConsumer(ctx context.Context) {
 // 3. 將轉碼結果上傳到 MinIO 的 processed/{videoID}/ 目錄
 // 4. 更新資料庫中該影片的狀態為 "ready"
 // 5. 清理本地暫存檔案
-func processTranscodingJob(ctx context.Context, job domain.TranscodingJob, mClient *database.MinIOClient, videoRepo *repository.VideoRepo) error {
+func processTranscodingJob(ctx context.Context, job domain.TranscodingJob, mClient database.MinIOClientRepo, videoRepo repository.VideoRepo) error {
 	// 1. 定義本地檔案的暫存路徑
 	localInputPath := fmt.Sprintf("./tmp/%d_original.mp4", job.VideoID)
 	localOutputDir := fmt.Sprintf("./tmp/%d_processed", job.VideoID)
@@ -153,7 +152,7 @@ func processTranscodingJob(ctx context.Context, job domain.TranscodingJob, mClie
 	if err != nil {
 		return fmt.Errorf("從資料庫取得影片失敗: %w", err)
 	}
-	video.Status = "ready"
+	video.Status = string(domain.VideoReady)
 	if err := videoRepo.Update(video); err != nil {
 		return fmt.Errorf("更新影片狀態失敗: %w", err)
 	}
@@ -183,7 +182,7 @@ func getContentType(filename string) string {
 }
 
 // 在消息消費端（例如 RabbitMQ 消費端）的某個函式中：
-func consumeTranscodingMessage(ctx context.Context, message []byte, mClient *database.MinIOClient, videoRepo *repository.VideoRepo) {
+func consumeTranscodingMessage(ctx context.Context, message []byte, mClient database.MinIOClientRepo, videoRepo repository.VideoRepo) {
 	var job domain.TranscodingJob
 	if err := json.Unmarshal(message, &job); err != nil {
 		log.Printf("解析轉碼工作訊息失敗: %v", err)

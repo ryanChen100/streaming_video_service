@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v4"
@@ -63,7 +64,7 @@ func (r *memberRepository) FindByMember(ctx context.Context, memberQuery *domain
 	err := row.Scan(&member.ID, &member.MemberID, &member.Email, &member.Password)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("no member found with given criteria")
+			return nil, errors.New("no member found with given criteria")
 		}
 		return nil, err
 	}

@@ -14,12 +14,13 @@ import (
 	"streaming_video_service/internal/member/repository"
 	"streaming_video_service/pkg/config"
 	"streaming_video_service/pkg/database"
+	"streaming_video_service/pkg/encrypt"
 	"streaming_video_service/pkg/logger"
 	memberpb "streaming_video_service/pkg/proto/member"
 )
 
 func main() {
-	logger.Log = logger.Initialize(config.EnvConfig.MemberService, config.EnvConfig.MemberServiceLogPath)
+	logger.Log = logger.Initialize(config.EnvConfig.MemberServiceLogPath)
 
 	cfg := config.LoadConfig[config.Member](config.EnvConfig.MemberService, config.EnvConfig.MemberServiceYAMLPath)
 
@@ -41,11 +42,11 @@ func main() {
 
 	memberRepo := repository.NewMemberRepository(pool)
 	masterName, sentinel := config.GetRedisSetting()
-	redisRepo, err := database.NewRedisRepository[domain.MemberSession](masterName, sentinel, cfg.RedisMember.RedisDB)
+	redisRepo, err := database.NewRedisRepository[domain.MemberSession](masterName, "unUse", sentinel, cfg.RedisMember.RedisDB)
 	if err != nil {
 		logger.Log.Fatal(fmt.Sprintf("connect redis err : %v", err))
 	}
-	usecase := app.NewMemberUseCase(memberRepo, cfg.SessionTTL*time.Minute, redisRepo)
+	usecase := app.NewMemberUseCase(memberRepo, cfg.SessionTTL*time.Minute, redisRepo, encrypt.HashPassword)
 
 	lis, err := net.Listen("tcp", cfg.IP+":"+cfg.Port)
 	if err != nil {

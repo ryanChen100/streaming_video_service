@@ -6,6 +6,7 @@ import (
 	"streaming_video_service/internal/member/domain"
 	"streaming_video_service/pkg/logger"
 	memberpb "streaming_video_service/pkg/proto/member"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -26,7 +27,7 @@ func (s *MemberGRPCServer) Register(ctx context.Context, req *memberpb.RegisterR
 		return &memberpb.RegisterRes{
 			Success: false,
 			Message: err.Error(),
-		}, nil
+		}, err
 	}
 	return &memberpb.RegisterRes{
 		Success: true,
@@ -56,7 +57,7 @@ func (s *MemberGRPCServer) FindMember(ctx context.Context, req *memberpb.FindByM
 				Password: "",
 			},
 			Message: err.Error(),
-		}, nil
+		}, err
 	}
 	return &memberpb.FindByMemberRes{
 		Success: true,
@@ -72,14 +73,14 @@ func (s *MemberGRPCServer) FindMember(ctx context.Context, req *memberpb.FindByM
 // Login 實作 Login
 func (s *MemberGRPCServer) Login(ctx context.Context, req *memberpb.LoginReq) (*memberpb.LoginRes, error) {
 	logger.Log.Debug("Login :", zap.String("email", req.GetEmail()), zap.String("password", req.GetPassword()))
-	token, err := s.Usecase.Login(ctx, req.GetEmail(), req.GetPassword())
+	token, err := s.Usecase.Login(ctx, req.GetEmail(), req.GetPassword(), time.Now())
 	if err != nil {
 		logger.Log.Error("Login Err", zap.String("email", req.GetPassword()), zap.String("password", req.GetPassword()), zap.String("Err :", err.Error()))
 		return &memberpb.LoginRes{
 			Success: false,
 			Token:   "",
 			Message: err.Error(),
-		}, nil
+		}, err
 	}
 	return &memberpb.LoginRes{
 		Success: true,
@@ -96,7 +97,7 @@ func (s *MemberGRPCServer) Logout(ctx context.Context, req *memberpb.LogoutReq) 
 		return &memberpb.LogoutRes{
 			Success: false,
 			Message: err.Error(),
-		}, nil
+		}, err
 	}
 	return &memberpb.LogoutRes{
 		Success: true,
@@ -112,7 +113,7 @@ func (s *MemberGRPCServer) ForceLogout(ctx context.Context, req *memberpb.ForceL
 		return &memberpb.ForceLogoutRes{
 			Success: false,
 			Message: err.Error(),
-		}, nil
+		}, err
 	}
 	return &memberpb.ForceLogoutRes{
 		Success: true,
@@ -129,7 +130,7 @@ func (s *MemberGRPCServer) CheckSessionTimeout(ctx context.Context, req *memberp
 			Success: false,
 			Expire:  expire,
 			Message: err.Error(),
-		}, nil
+		}, err
 	}
 	return &memberpb.CheckSessionTimeoutRes{
 		Success: true,
@@ -146,7 +147,7 @@ func (s *MemberGRPCServer) ReconnectSession(ctx context.Context, req *memberpb.R
 		return &memberpb.ReconnectSessionRes{
 			Success: false,
 			Message: err.Error(),
-		}, nil
+		}, err
 	}
 	return &memberpb.ReconnectSessionRes{
 		Success: true,

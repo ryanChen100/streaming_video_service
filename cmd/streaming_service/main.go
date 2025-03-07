@@ -20,7 +20,7 @@ import (
 )
 
 func main() {
-	logger.Log = logger.Initialize(config.EnvConfig.Streaming, config.EnvConfig.StreamingLogPath)
+	logger.Log = logger.Initialize(config.EnvConfig.StreamingLogPath)
 
 	cfg := config.LoadConfig[config.Streaming](config.EnvConfig.Streaming, config.EnvConfig.StreamingYAMLPath)
 
@@ -95,57 +95,17 @@ func main() {
 		log.Fatalf("Queue Declare failed: %v", err)
 	}
 
-	// 建立 Kafka Writer 使用重試機制
-	// kafkaWriter, err := database.NewKafkaWriterWithRetry(database.KafkaConnection{
-	// 	Brokers:       cfg.KafKa.Brokers,
-	// 	Topic:         cfg.KafKa.Topic,
-	// 	RetryCount:    cfg.KafKa.RetryCount,
-	// 	RetryInterval: cfg.KafKa.RetryInterval,
-	// })
-	// if err != nil {
-	// 	log.Fatalf("Kafka Writer 建立失敗: %v", err)
-	// }
-	// defer kafkaWriter.Close()
+	rabbitRepo := database.NewRabbitRepository(rabbitChannel)
 
 	// 假設已初始化 rabbitChannel, minioClient, videoRepo
-	consumer := app.NewConsumer(rabbitChannel, minioClient, videoRepo, domain.QueueName)
+	consumer := app.NewConsumer(rabbitRepo, minioClient, videoRepo, domain.QueueName)
 	// 使用 context 控制 Consumer 的生命週期
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	// 啟動 Consumer（通常以 goroutine 執行）
 	go consumer.StartConsumer(ctx)
 
-	// // 3. 建立 Fiber 應用
-	// // 创建 Fiber 应用
-	// r := fiber.New()
-	// // 添加日志中间件
-	// file, err := os.OpenFile(fmt.Sprintf("%s/access.log", config.EnvConfig.StreamingLogPath), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-	// if err != nil {
-	// 	log.Fatalf("Failed to open log file: %v", err)
-	// }
-	// defer file.Close()
-
-	// r.Use(fiber_log.New(fiber_log.Config{
-	// 	Output: file, // 将日志输出到文件
-	// }))
-
-	// // 4. 設定 API 路由
-	// videoHandler := &handlers.VideoHandler{
-	// 	MinioClient:   minioClient,
-	// 	VideoRepo:     videoRepo,
-	// 	RabbitChannel: rabbitChannel,
-	// }
-	// router.RegisterRoutes(r, videoHandler)
-
-	// // 5. 啟動 API 服務（預設埠號）
-	// // 启动服务器
-	// if err := r.Listen(":" + cfg.Port); err != nil {
-	// 	// 执行清理操作
-	// 	cleanup()
-	// 	logger.Log.Fatal("Server failed to start", zap.Error(err))
-	// }
-
-	usecase := app.NewStreamingUseCase(minioClient, videoRepo, rabbitChannel)
+	usecase := app.NewStreamingUseCase(minioClient, videoRepo, rabbitRepo)
 
 	lis, err := net.Listen("tcp", cfg.IP+":"+cfg.Port)
 	if err != nil {

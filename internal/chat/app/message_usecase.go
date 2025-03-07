@@ -17,15 +17,15 @@ import (
 type SendMessageUseCase struct {
 	roomRepo     repository.RoomRepository
 	msgRepo      repository.MessageRepository
-	memberPubSub *repository.RedisPubSub
-	roomPubSub   *repository.RedisPubSub
+	memberPubSub repository.PubSubRepository
+	roomPubSub   repository.PubSubRepository
 }
 
 // NewSendMessageUseCase init create message use case
 func NewSendMessageUseCase(
 	roomRepo repository.RoomRepository,
 	msgRepo repository.MessageRepository,
-	pub *repository.RedisPubSub,
+	pub repository.PubSubRepository,
 ) *SendMessageUseCase {
 	return &SendMessageUseCase{
 		roomRepo:     roomRepo,
@@ -80,8 +80,8 @@ func (uc *SendMessageUseCase) Execute(ctx context.Context, roomID, senderID, con
 		}
 	}
 
-	// 4. pubSub 同步給房間內除自己的member
-	if uc.memberPubSub != nil {
+	// 4. pubSub 同步給房間內所有member
+	// if uc.memberPubSub != nil {
 		for _, memberID := range room.Members {
 			if memberID != senderID {
 				if err := uc.memberPubSub.Publish(memberID, newMsg); err != nil {
@@ -89,7 +89,7 @@ func (uc *SendMessageUseCase) Execute(ctx context.Context, roomID, senderID, con
 				}
 			}
 		}
-	}
+	// }
 
 	// 5) ephemeral broadcast(同節點):
 	// h.hub.Broadcast(roomID, rawMsg)

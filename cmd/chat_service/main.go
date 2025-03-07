@@ -21,10 +21,10 @@ import (
 )
 
 func main() {
-	logger.Log = logger.Initialize(config.EnvConfig.ChatService, config.EnvConfig.ChatServiceLogPath)
+	logger.Log = logger.Initialize(config.EnvConfig.ChatServiceLogPath)
 	cfg := config.LoadConfig[config.Chat](config.EnvConfig.ChatService, config.EnvConfig.ChatServiceYAMLPath)
 
-	// 2. 建立 Mongo 連線 (存訊息)
+	// 1. 建立 Mongo 連線 (存訊息)
 	ctx := context.Background()
 	// uri := "mongodb://myuser:mypassword@localhost:27017"
 	uri := fmt.Sprintf("mongodb://%s:%s@%s:%d", cfg.MongoSQL.User, cfg.MongoSQL.Password, cfg.MongoSQL.Host, cfg.MongoSQL.Port)
@@ -44,31 +44,13 @@ func main() {
 	}
 	defer mongo.Close(ctx)
 
-	// 3. 建立 Redis 連線 (Pub/Sub)
+	// 2. 建立 Redis 連線 (Pub/Sub)
 	masterName, sentinel := config.GetRedisSetting()
-	redisClient, err := database.NewRedisClient(masterName, sentinel, cfg.Redis.RedisDB)
+	redisClient, err := database.NewRedisClient(masterName, "unUse", sentinel, cfg.Redis.RedisDB)
 	if err != nil {
 		logger.Log.Fatal(fmt.Sprintf("connect redis err : %v", err))
 	}
 
-	// 4.建立 gRPC 连接
-	// client, err := grpc.Dial(cfg.MemberService.IP+":"+cfg.MemberService.Port, grpc.WithInsecure())
-	// if err != nil {
-	// 	logger.Log.Fatal(fmt.Sprintf("Failed to connect: %v", err))
-	// }
-	// defer client.Close()
-
-	// go func() {
-	// 	for {
-	// 		state := client.GetState()
-	// 		logger.Log.Info(fmt.Sprintf("Connection state: %s", state))
-	// 		if state == connectivity.Ready {
-	// 			logger.Log.Info("Connection is READY")
-	// 			break
-	// 		}
-	// 		time.Sleep(500 * time.Millisecond)
-	// 	}
-	// }()
 
 	client, err := database.CreateGRPCClient(cfg.MemberService.IP + ":" + cfg.MemberService.Port)
 	if err != nil {
@@ -77,18 +59,18 @@ func main() {
 	logger.Log.Info(fmt.Sprintf("grpc connect :%v", client.GetState()))
 	memberClient := memberpb.NewMemberServiceClient(client)
 
-	// 5. 初始化 Repository
+	// 3. 初始化 Repository
 	roomRepo := repository.NewMongoChatRepository(mongo.Database)         // PostgreSQL
 	inviteRepo := repository.NewMongoInvitationRepository(mongo.Database) // PostgreSQL
 	msgRepo := repository.NewMongoChatMessageRepository(mongo.Database)   // MongoDB
 	pub := repository.NewRedisPubSub(redisClient)
 
-	// 6. 初始化 UseCases
+	// 4. 初始化 UseCases
 	roomUC := app.NewRoomUseCase(inviteRepo, roomRepo)
 	sendMessageUC := app.NewSendMessageUseCase(roomRepo, msgRepo, pub)
 	// memberHub := app.NewEphemeralHub()
 
-	// 7. 啟動 Fiber
+	// 5. 啟動 Fiber
 	// 创建 Fiber 应用
 	r := fiber.New()
 	file, err := os.OpenFile(fmt.Sprintf("%s/access.log", config.EnvConfig.ChatServiceLogPath), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)

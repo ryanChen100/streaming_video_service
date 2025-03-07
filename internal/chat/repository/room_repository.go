@@ -18,7 +18,6 @@ type RoomRepository interface {
 
 type chatRepository struct {
 	roomsColl *mongo.Collection
-	// invitationsColl *mongo.Collection
 }
 
 // NewMongoChatRepository create new mongo chat

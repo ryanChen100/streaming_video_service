@@ -36,7 +36,7 @@ func ValidatePasswordStrength(password string) error {
 
 	// 至少包含一個特殊字符
 	if matched, _ := regexp.MatchString(`[!@#\$%\^&\*]`, password); !matched {
-		return fmt.Errorf("password must contain at least one special character (!@#$%^&*)")
+		return fmt.Errorf(`password must contain at least one special character (!@#\$%%\^&\*)`)
 	}
 
 	return nil

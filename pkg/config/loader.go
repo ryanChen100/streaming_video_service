@@ -2,10 +2,10 @@ package config
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -43,17 +43,23 @@ type EnvInfo struct {
 // EnvConfig 集合服務端口
 var (
 	EnvConfig = initEnv()
-	env       string
 	envConfig EnvInfo
 	once      sync.Once
+	env       string
 )
 
 func initEnv() EnvInfo {
 	once.Do(func() {
-		if err := godotenv.Load(getEnvPath()); err != nil {
+
+		path, err := GetPath(".env", 5)
+		if err != nil {
+			log.Printf("Warning: Could not get .env path: %v", err)
+		}
+
+		if err := godotenv.Load(path); err != nil {
 			log.Printf("Warning: Could not load .env file: %v", err)
 		}
-		//	取得當前環境
+
 		env = os.Getenv("ENV")
 
 		envConfig = EnvInfo{
@@ -87,6 +93,15 @@ func initEnv() EnvInfo {
 func IsProduction() bool {
 	var b bool
 	if env == "production" {
+		b = true
+	}
+	return b
+}
+
+// IsLocal check run env
+func IsLocal() bool {
+	var b bool
+	if env == "local" {
 		b = true
 	}
 	return b
@@ -135,8 +150,12 @@ func LoadConfig[T any](serviceName string, configPath string) T {
 
 // GetRedisSetting get redis setting from .env
 func GetRedisSetting() (string, []string) {
+	path, err := GetPath(".env", 5)
+	if err != nil {
+		log.Printf("Warning: Could not get .env path: %v", err)
+	}
 
-	if err := godotenv.Load(getEnvPath()); err != nil {
+	if err := godotenv.Load(path); err != nil {
 		log.Printf("Warning: Could not load .env file: %v", err)
 	}
 
@@ -177,15 +196,15 @@ func GetRedisSetting() (string, []string) {
 	return masterName, sentinelAddrs
 }
 
-func getEnvPath() string {
-	//因docker-compose已掛載.env,可以不用從當前目錄找.env
-	//但本地執行仍需要,docker不影響則不註解，但會顯示"Warning: Could not load .env file"
-	// 動態獲取當前目錄
-	workingDir, err := os.Getwd()
-	if err != nil {
-		log.Fatalf("Error getting working directory: %v", err)
-	}
+// GetPath use fileName loop maxCount find file path
+func GetPath(fileName string, maxCount int) (string, error) {
+	path := "./" + fileName
 
-	// 拼接專案根目錄的 .env 路徑
-	return filepath.Join(workingDir, "../../.env")
+	for i := 0; i < maxCount; i++ {
+		if _, err := os.Stat(path); err == nil {
+			return path, nil
+		}
+		path = "../" + path
+	}
+	return "", errors.New(fileName + "can't find path ")
 }
