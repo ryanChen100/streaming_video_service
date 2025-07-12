@@ -52,6 +52,15 @@ BEFORE INSERT OR UPDATE ON member
 FOR EACH ROW
 EXECUTE FUNCTION update_member_timestamps();
 
+-- 为 member 表创建索引
+CREATE INDEX IF NOT EXISTS idx_member_status ON member(status);
+CREATE INDEX IF NOT EXISTS idx_member_login_time ON member(login_time);
+CREATE INDEX IF NOT EXISTS idx_member_created_at ON member(created_at);
+CREATE INDEX IF NOT EXISTS idx_member_updated_at ON member(updated_at);
+
+-- 为状态和登录时间组合查询创建复合索引
+CREATE INDEX IF NOT EXISTS idx_member_status_login_time ON member(status, login_time);
+
 SELECT 'CREATE DATABASE streaming_db'
 WHERE NOT EXISTS (
     SELECT FROM pg_database WHERE datname = 'streaming_db'
@@ -70,3 +79,17 @@ CREATE TABLE IF NOT EXISTS videos (
     status      VARCHAR(50),     -- "uploaded", "processing", "ready"
     view_count  INT DEFAULT 0    -- 預設0次觀看
 );
+
+-- 为 videos 表创建索引
+CREATE INDEX IF NOT EXISTS idx_videos_type ON videos(type);
+CREATE INDEX IF NOT EXISTS idx_videos_status ON videos(status);
+CREATE INDEX IF NOT EXISTS idx_videos_view_count ON videos(view_count DESC);
+CREATE INDEX IF NOT EXISTS idx_videos_title ON videos(title);
+CREATE INDEX IF NOT EXISTS idx_videos_file_name ON videos(file_name);
+
+-- 为常见查询创建复合索引
+CREATE INDEX IF NOT EXISTS idx_videos_type_status ON videos(type, status);
+CREATE INDEX IF NOT EXISTS idx_videos_status_view_count ON videos(status, view_count DESC);
+
+-- 为标题搜索创建文本搜索索引（支持模糊查询）
+CREATE INDEX IF NOT EXISTS idx_videos_title_gin ON videos USING gin(to_tsvector('english', title));

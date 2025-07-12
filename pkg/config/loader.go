@@ -198,13 +198,19 @@ func GetRedisSetting() (string, []string) {
 
 // GetPath use fileName loop maxCount find file path
 func GetPath(fileName string, maxCount int) (string, error) {
-	path := "./" + fileName
+	// 首先检查当前目录
+	if _, err := os.Stat(fileName); err == nil {
+		return fileName, nil
+	}
 
+	// 然后向上查找父目录
+	path := fileName
 	for i := 0; i < maxCount; i++ {
+		path = "../" + path
 		if _, err := os.Stat(path); err == nil {
 			return path, nil
 		}
-		path = "../" + path
 	}
-	return "", errors.New(fileName + "can't find path ")
+	return "", errors.New(fileName + " can't find path")
 }
+
